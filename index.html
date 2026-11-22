@@ -23,6 +23,13 @@ body{display:flex;flex-direction:column;align-items:center;padding-block:6px;pad
 #pct{font-size:19px;color:#2dd4bf}
 #bar{width:100%;max-width:560px;height:8px;background:var(--panel);border-radius:99px;margin:6px 0;overflow:hidden}
 #fill{height:100%;width:0;background:linear-gradient(90deg,#14b8a6,#a78bfa);border-radius:99px;transition:width .4s}
+#cashw{width:100%;max-width:560px;height:16px;background:var(--panel);border-radius:99px;overflow:hidden;position:relative;margin-bottom:6px}
+#cash{height:100%;width:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:99px}
+#cashw.low #cash{background:#f43f5e;animation:pulse .5s infinite alternate}
+#cashl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#1a1300;text-shadow:0 0 4px #fff8}
+@keyframes pulse{from{opacity:1}to{opacity:.45}}
+.legend{text-align:right;font-size:14px;color:var(--soft);line-height:1.5;margin:8px 0;padding:0;list-style:none}
+.legend li{margin:5px 0}
 #wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0}
 canvas{display:block;border-radius:10px;box-shadow:0 0 0 1px var(--line),0 10px 40px #0008}
 .pop{position:absolute;pointer-events:none;font-weight:900;font-size:22px;color:#fff;text-shadow:0 2px 12px #14b8a6;animation:up .9s ease-out forwards;direction:ltr;white-space:nowrap}
@@ -72,20 +79,24 @@ p{margin:8px 0;color:var(--soft);line-height:1.5;font-size:15px}
   <div class="chip" id="mute" role="button" aria-label="צליל">🔊</div>
 </div>
 <div id="bar"><div id="fill"></div></div>
+<div id="cashw"><div id="cash"></div><span id="cashl">💰 מזומן</span></div>
 <div id="wrap"><canvas id="cv"></canvas><div id="toast"></div></div>
 
 <div class="ov on" id="start"><div class="box">
   <h1>כיבוש שוק</h1>
-  <p>כובשים נתח שוק, ובדרך מאמנים אינסטינקטים של יזם.</p>
-  <ul class="how">
-    <li>מחליקים עם האצבע כדי לזוז.</li>
-    <li>יוצאים מהשטח שלך, מציירים קו וחוזרים. כל מה שסגרת הופך לשלך.</li>
-    <li>המתחרים (העיגולים האדומים) שורפים את הקו שלך כשאתה בחוץ. מעגל גדול = רווח גדול וסיכון גדול.</li>
-    <li>כל שני כיבושים: החלטת יזם ב־7 שניות. תשובה נכונה נותנת כוח מיוחד.</li>
+  <p>מחליקים כדי לזוז. יוצאים מהשטח, מציירים קו וחוזרים: מה שסגרת שלך.</p>
+  <ul class="legend">
+    <li>🔴 <b>מתחרה</b> קופץ בשטח הפתוח ושורף לך את הקו.</li>
+    <li>🟣 <b>צייד</b> (משלב 2) נמשך אליך כשאתה בחוץ.</li>
+    <li>🟠 <b>פולש</b> (משלב 3) מסתובב על השטח שלך. אל תיתן לו לגעת בך.</li>
+    <li>💰 <b>המזומן יורד כל הזמן.</b> כל כיבוש ממלא. נגמר = מאבדים חיים.</li>
+    <li>💥 סוגרים מתחרה בכיס קטן = הוא מחוסל. בונוס ענק.</li>
+    <li>⚡ כיבושים ברצף = קומבו. בונוסים בשטח: לגעת או לסגור אותם לפני שנעלמים.</li>
   </ul>
   <div class="rk" id="rkS"></div>
   <p id="learned"></p>
-  <button class="btn" id="go">יאללה, לכבוש</button>
+  <button class="btn" id="go">🎧 מצב פודקאסט: רק משחק</button>
+  <button class="opt" id="goQ">🧠 עם החלטות יזם בין כיבושים</button>
 </div></div>
 
 <div class="ov" id="card"><div class="box">
@@ -160,7 +171,7 @@ const Q=[
 ["מציעים לך שותפות נוצצת שלא קשורה ללקוח שלך.","אומרים לא, זה מסיח","אומרים כן, הזדמנות","כל ״כן״ לדבר צדדי הוא ״לא״ ללקוח שלך."]
 ];
 const RISK=["יצאת רחוק מדי. מעגל גדול = רווח גדול, אבל גם חשיפה גדולה.","כמו מזומן: כל רגע מחוץ לבסיס שורף ראנוויי.","קודם ניצחון קטן ובטוח, אחר כך מהלך גדול.","סיכון מחושב הוא קצר וברור. סיכון ארוך הוא הימור.","תסגור מעגלים מהר. מה שלא נסגר לא שלך."];
-const LVL=["השוק הבא קשה יותר: יותר מתחרים, יותר מהירות. כמו בחיים אחרי הצלחה ראשונה.","כל שלב = שוק חדש. מה שעבד קודם לא תמיד עובד עכשיו.","יותר מתחרים אומר מעגלים קטנים ומהירים יותר. ככה גדלים בשוק צפוף.","שימו לב: הניקוד מוכפל ברצף התשובות הנכונות. אינסטינקט טוב מצטבר."];
+const LVL=["השוק הבא קשה יותר: יותר מתחרים, יותר מהירות. כמו בחיים אחרי הצלחה ראשונה.","כל שלב = שוק חדש. מה שעבד קודם לא תמיד עובד עכשיו.","יותר מתחרים אומר מעגלים קטנים ומהירים יותר. ככה גדלים בשוק צפוף.","טקטיקה: שני כיבושים קטנים תוך 4 שניות שווים יותר ממהלך אחד גדול ואיטי.","סגור את הצייד בכיס קטן ליד הקיר. ככה מחסלים אותו.","הפולש חי על השטח שלך. לפעמים הכי בטוח זה דווקא לצאת החוצה."];
 const RANKS=[[0,"💡 רעיון על מפית"],[2000,"🛠️ MVP"],[6000,"🎯 Product-Market Fit"],[15000,"🌱 Seed"],[35000,"🚀 Series A"],[80000,"📈 סקייל־אפ"],[200000,"🦄 יוניקורן"]];
 
 const $=s=>document.querySelector(s);
@@ -172,6 +183,8 @@ const P={x:0,y:0,dx:0,dy:0,sx:0,sy:0};
 let level=1,lives=3,score=0,streak=0,shield=false,slowUntil=0,pendingSlow=false,capN=0,running=false,overlay=true;
 let interior=1,baseOwned=0,owned=0,target=65,stepMs=90,acc=0,last=0,shakeUntil=0,flashUntil=0;
 let runRight=0,runTotal=0,runWrong=[],recent=[];
+let cash=100,combo=0,lastCap=-1e9,invUntil=0,fastUntil=0,slowF=0.4,picks=[],nextPick=0,nextBeat=0,quizOn=false,runKills=0,cashShown=-1;
+const PK={cash:'💰',freeze:'🧊',shield:'🛡️',fast:'⚡',gem:'💎'};
 let muted=S.get('mute',false);
 
 /* ---------- sound & haptics ---------- */
@@ -203,9 +216,13 @@ function initLevel(){
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(isBase(x,y)){G[y*COLS+x]=1;baseOwned++}
   owned=baseOwned;interior=N-baseOwned;
   P.x=COLS>>1;P.y=ROWS-1;P.dx=P.dy=0;P.sx=P.x;P.sy=P.y;
-  E=[];const n=Math.min(7,1+level);
-  for(let i=0;i<n;i++)E.push({x:3+Math.random()*(COLS-6),y:3+Math.random()*(ROWS-9),vx:Math.random()<.5?-1:1,vy:Math.random()<.5?-1:1});
+  E=[];
+  const nb=Math.min(4,2+Math.floor((level-1)/3)),nh=level>=2?Math.min(2,1+Math.floor((level-2)/3)):0,np=level>=3?Math.min(2,1+Math.floor((level-3)/4)):0;
+  const rnd=()=>Math.random()<.5?-1:1;
+  for(let i=0;i<nb+nh;i++)E.push({k:i<nb?'b':'h',x:3+Math.random()*(COLS-6),y:3+Math.random()*(ROWS-10),vx:rnd(),vy:rnd()});
+  for(let i=0;i<np;i++)E.push({k:'p',x:i?COLS-3.5:3.5,y:1,vx:i?-1:1,vy:1});
   stepMs=Math.max(60,90-level*3);target=Math.min(80,63+level*2);acc=0;slowUntil=0;
+  cash=100;combo=0;lastCap=-1e9;picks=[];nextPick=performance.now()+4000;invUntil=0;fastUntil=0;
   updHud();
 }
 function ownPct(){return(owned-baseOwned)/interior*100}
@@ -251,18 +268,48 @@ function step(){
   if(c===2){die();return}
   if(c===0){
     if(cur===1){P.sx=P.x;P.sy=P.y}
-    G[j]=2;trail.push(j);P.x=nx;P.y=ny;return;
+    G[j]=2;trail.push(j);P.x=nx;P.y=ny;grabAt(j);return;
   }
-  P.x=nx;P.y=ny;
+  P.x=nx;P.y=ny;grabAt(j);
   if(trail.length){P.dx=P.dy=0;capture()}
 }
-function solid(x,y){const cx=Math.floor(x),cy=Math.floor(y);if(cx<0||cy<0||cx>=COLS||cy>=ROWS)return true;return G[cy*COLS+cx]===1}
+function solid(x,y,land){const cx=Math.floor(x),cy=Math.floor(y);if(cx<0||cy<0||cx>=COLS||cy>=ROWS)return true;return land?G[cy*COLS+cx]!==1:G[cy*COLS+cx]===1}
 function moveEnemy(e,dt,sp){
+  const land=e.k==='p';
+  if(e.k==='h'&&trail.length){
+    let tx=P.x+.5-e.x,ty=P.y+.5-e.y;const d=Math.hypot(tx,ty)||1;tx/=d;ty/=d;
+    e.vx+=(tx-e.vx)*Math.min(1,dt*1.6);e.vy+=(ty-e.vy)*Math.min(1,dt*1.6);
+    const m=Math.hypot(e.vx,e.vy)||1;e.vx/=m;e.vy/=m;
+    if(Math.abs(e.vx)<.25)e.vx=.25*Math.sign(e.vx||1);if(Math.abs(e.vy)<.25)e.vy=.25*Math.sign(e.vy||1);
+  }
   const r=0.4;let nx=e.x+e.vx*sp*dt,ny=e.y+e.vy*sp*dt;
-  if(solid(nx+e.vx*r,e.y)){e.vx*=-1;nx=e.x}
-  if(solid(e.x,ny+e.vy*r)){e.vy*=-1;ny=e.y}
-  if(solid(nx+e.vx*r,ny+e.vy*r)){e.vx*=-1;e.vy*=-1;nx=e.x;ny=e.y}
+  const sx=Math.sign(e.vx),sy=Math.sign(e.vy);
+  if(solid(nx+sx*r,e.y,land)){e.vx*=-1;nx=e.x}
+  if(solid(e.x,ny+sy*r,land)){e.vy*=-1;ny=e.y}
+  if(solid(nx+Math.sign(e.vx)*r,ny+Math.sign(e.vy)*r,land)){e.vx*=-1;e.vy*=-1;nx=e.x;ny=e.y}
   e.x=nx;e.y=ny;
+}
+function grabAt(i){for(const p of picks)if(p.i===i&&!p.got){collect(p,false)}}
+function collect(p,enclosed){
+  p.got=true;const now=performance.now();
+  if(p.k==='cash'){cash=Math.min(100,cash+35)}
+  else if(p.k==='freeze'){slowF=0.12;slowUntil=now+5000}
+  else if(p.k==='shield'){shield=true}
+  else if(p.k==='fast'){fastUntil=now+7000}
+  else{score+=800*level}
+  const names={cash:'💰 +35 מזומן',freeze:'🧊 המתחרים קפואים',shield:'🛡️ מגן',fast:'⚡ מהירות',gem:'💎 +'+(800*level).toLocaleString('en-US')};
+  popup(names[p.k],p.i%COLS,(p.i/COLS)|0);
+  if(enclosed)toast('סגרת את הבונוס בתוך השטח 👌');
+  arp([988,1319],45);vib(25);updHud();
+}
+function spawnPick(now){
+  for(let t=0;t<40;t++){
+    const x=3+((Math.random()*(COLS-6))|0),y=3+((Math.random()*(ROWS-6))|0),i=y*COLS+x;
+    if(G[i]!==0)continue;
+    if(E.some(e=>Math.abs(e.x-x)<3&&Math.abs(e.y-y)<3))continue;
+    const ks=['cash','cash','freeze','shield','fast','gem'];
+    picks.push({i,k:ks[(Math.random()*ks.length)|0],exp:now+13000,got:false});return;
+  }
 }
 function hitsTrail(e){
   const pts=[[0,0],[.32,0],[-.32,0],[0,.32],[0,-.32]];
@@ -274,40 +321,70 @@ function capture(){
   let gained=trail.length;
   for(const i of trail){G[i]=1;born[i]=now}
   trail=[];
-  const seen=new Uint8Array(N),st=[];
-  const seed=i=>{if(i>=0&&i<N&&G[i]===0&&!seen[i]){seen[i]=1;st.push(i)}};
+  // label each open region that holds a competitor; small regions become traps
+  const lab=new Int32Array(N).fill(-1),regions=[];
   for(const e of E){
-    const i=Math.floor(e.y)*COLS+Math.floor(e.x);
-    seed(i);if(G[i]!==0){seed(i+1);seed(i-1);seed(i+COLS);seed(i-COLS)}
+    if(e.k==='p')continue;
+    let i=Math.floor(e.y)*COLS+Math.floor(e.x);
+    if(G[i]!==0){const nb=[i+1,i-1,i+COLS,i-COLS].find(j=>j>=0&&j<N&&G[j]===0);if(nb===undefined){e.dead=true;continue}i=nb}
+    if(lab[i]>=0){regions[lab[i]].en.push(e);continue}
+    const id=regions.length,reg={cells:[],en:[e]};regions.push(reg);
+    const st=[i];lab[i]=id;
+    while(st.length){
+      const c=st.pop(),x=c%COLS;reg.cells.push(c);
+      if(x>0&&G[c-1]===0&&lab[c-1]<0){lab[c-1]=id;st.push(c-1)}
+      if(x<COLS-1&&G[c+1]===0&&lab[c+1]<0){lab[c+1]=id;st.push(c+1)}
+      if(c>=COLS&&G[c-COLS]===0&&lab[c-COLS]<0){lab[c-COLS]=id;st.push(c-COLS)}
+      if(c+COLS<N&&G[c+COLS]===0&&lab[c+COLS]<0){lab[c+COLS]=id;st.push(c+COLS)}
+    }
   }
-  while(st.length){const i=st.pop(),x=i%COLS;if(x>0)seed(i-1);if(x<COLS-1)seed(i+1);seed(i-COLS);seed(i+COLS)}
+  const trapMax=Math.max(14,Math.round(interior*0.035));
+  let kills=0;const killAt=[];
+  for(const r of regions){
+    if(r.cells.length<=trapMax){for(const c of r.cells)lab[c]=-2;for(const e of r.en){e.dead=true;kills++;killAt.push(e)}}
+  }
+  for(const e of E)if(e.dead&&!killAt.includes(e)){kills++;killAt.push(e)}
   const filled=[];
-  for(let i=0;i<N;i++)if(G[i]===0&&!seen[i]){
+  for(let i=0;i<N;i++)if(G[i]===0&&lab[i]<0){
     G[i]=1;const x=i%COLS,y=(i/COLS)|0;born[i]=now+(Math.abs(x-P.x)+Math.abs(y-P.y))*14;gained++;filled.push(i);
   }
+  E=E.filter(e=>!e.dead);
   owned+=gained;
+  for(const p of picks)if(!p.got&&G[p.i]===1)collect(p,true);
   const pct=gained/interior*100;
-  const mult=1+streak*0.2;
-  const pts=Math.round(gained*10*level*mult);
+  combo=(now-lastCap<4000)?combo+1:1;lastCap=now;
+  const pts=Math.round(gained*10*level*(1+streak*0.2)*combo);
   score+=pts;
+  cash=Math.min(100,cash+Math.max(6,pct*5)+kills*25);
   popup('+'+pct.toFixed(1)+'%',P.x,P.y);
+  if(combo>1)setTimeout(()=>popup('COMBO ×'+combo,P.x,Math.max(1,P.y-2)),180);
   const pool=filled.length?filled:[P.y*COLS+P.x];
   for(let k=0;k<Math.min(46,4+filled.length);k++){const i=pool[(Math.random()*pool.length)|0];spark((i%COLS+.5)*cell,(((i/COLS)|0)+.5)*cell)}
-  if(pct>=8){arp([523,659,784,1046],55);toast('🚀 מהלך גדול! +'+pts.toLocaleString('en-US'));shakeUntil=now+260;vib([30,40,30])}
+  if(kills){
+    runKills+=kills;const b=1000*level*kills;score+=b;
+    for(const e of killAt)for(let k=0;k<24;k++)spark(e.x*cell,e.y*cell);
+    toast('💥 חיסלת '+(kills>1?kills+' מתחרים':'מתחרה')+'! +'+b.toLocaleString('en-US'));
+    arp([392,523,659,784,1046,1318],45);shakeUntil=now+420;vib([60,40,60,40,120]);
+  }else if(pct>=8){arp([523,659,784,1046],55);toast('🚀 מהלך גדול! +'+pts.toLocaleString('en-US'));shakeUntil=now+260;vib([30,40,30])}
   else{arp(pct>=3?[587,740,880]:[659,880],50);vib(20)}
   updHud();
   if(ownPct()>=target){overlay=true;setTimeout(levelDone,650);return}
-  if(pct>=1){capN++;if(capN%2===0){overlay=true;setTimeout(showCard,480)}}
+  if(quizOn&&pct>=1){capN++;if(capN%2===0){overlay=true;setTimeout(showCard,480)}}
 }
 function die(){
-  for(const i of trail)G[i]=0;
-  trail=[];P.x=P.sx;P.y=P.sy;P.dx=P.dy=0;
-  const now=performance.now();shakeUntil=now+380;flashUntil=now+300;
+  const now=performance.now();
+  if(now<invUntil)return;
+  if(trail.length){for(const i of trail)G[i]=0;trail=[];P.x=P.sx;P.y=P.sy}
+  P.dx=P.dy=0;combo=0;invUntil=now+1500;
+  shakeUntil=now+380;flashUntil=now+300;
   vib(160);beep(130,0.35,'sawtooth',0.08);
   if(shield){shield=false;toast('🛡️ המגן ספג את המכה');updHud();return}
+  loseLife(RISK[(Math.random()*RISK.length)|0]);
+}
+function loseLife(msg){
   lives--;updHud();
   if(lives<=0){gameOver();return}
-  toast(RISK[(Math.random()*RISK.length)|0]);
+  toast(msg);
 }
 
 /* ---------- effects ---------- */
@@ -360,7 +437,7 @@ function reward(){
   const o=['shield','slow','bonus'];if(lives<5)o.push('life');
   const r=o[(Math.random()*o.length)|0];
   if(r==='shield'){shield=true;return'🛡️ מגן: הפגיעה הבאה לא תעלה לך'}
-  if(r==='slow'){pendingSlow=true;return'🧊 המתחרים מואטים ל־9 שניות'}
+  if(r==='slow'){pendingSlow=true;return'🐢 המתחרים מואטים ל־9 שניות'}
   if(r==='life'){lives++;return'❤️ +1 חודש ראנוויי'}
   const b=300*level;score+=b;return'💰 +'+b.toLocaleString('en-US')+' נקודות';
 }
@@ -368,7 +445,7 @@ $('#o1').addEventListener('click',()=>answer(1));
 $('#o2').addEventListener('click',()=>answer(2));
 $('#cGo').addEventListener('click',()=>{
   $('#card').classList.remove('on');
-  if(pendingSlow){slowUntil=performance.now()+9000;pendingSlow=false}
+  if(pendingSlow){slowF=0.4;slowUntil=performance.now()+9000;pendingSlow=false}
   acc=0;overlay=false;
 });
 
@@ -376,11 +453,11 @@ $('#cGo').addEventListener('click',()=>{
 function stat(label,val){return'<div><b>'+val+'</b>'+label+'</div>'}
 function levelDone(){
   if(!running)return;
-  const bonus=lives*500*level;score+=bonus;
+  const bonus=lives*500*level+Math.round(cash)*10*level;score+=bonus;
   const gotLife=lives<5;if(gotLife)lives++;
   arp([523,659,784,1046,1318],85);vib([40,50,40,50,80]);
   $('#lvT').textContent='שלב '+level+' הושלם 🎉';
-  $('#lvS').innerHTML=stat('נתח שוק',Math.floor(ownPct())+'%')+stat('בונוס ראנוויי','+'+bonus.toLocaleString('en-US'))+stat('ניקוד',score.toLocaleString('en-US'));
+  $('#lvS').innerHTML=stat('נתח שוק',Math.floor(ownPct())+'%')+stat('בונוס חיים ומזומן','+'+bonus.toLocaleString('en-US'))+stat('ניקוד',score.toLocaleString('en-US'));
   $('#lvP').textContent=(gotLife?'❤️ קיבלת עוד חודש ראנוויי. ':'')+LVL[(level-1)%LVL.length];
   $('#lvl').classList.add('on');updHud();
 }
@@ -395,20 +472,22 @@ function gameOver(){
   running=false;overlay=true;clearTimeout(cardTimer);$('#card').classList.remove('on');
   const best=Math.max(S.get('best',0),score);S.set('best',best);
   const xp=S.get('xp',0)+score;S.set('xp',xp);
-  $('#ovS').innerHTML=stat('ניקוד',score.toLocaleString('en-US'))+stat('שיא',best.toLocaleString('en-US'))+stat('שלב',level)+stat('החלטות נכונות',runRight+'/'+runTotal);
+  $('#ovS').innerHTML=stat('ניקוד',score.toLocaleString('en-US'))+stat('שיא',best.toLocaleString('en-US'))+stat('שלב',level)+stat('מתחרים שחוסלו',runKills)+(quizOn?stat('החלטות נכונות',runRight+'/'+runTotal):'');
   $('#rkO').innerHTML=rankHTML(xp);
   const seenW=new Set(),ls=[];for(const q of runWrong){if(!seenW.has(q[0])){seenW.add(q[0]);ls.push(q)}}
   $('#ovL').innerHTML=ls.length?'<div class="ltitle">מה לקחת מהסיבוב:</div><ul class="lessons">'+ls.slice(0,3).map(q=>'<li>'+q[3]+'</li>').join('')+'</ul>':(runTotal?'<p>כל ההחלטות נכונות. אינסטינקט חד.</p>':'');
   setTimeout(()=>$('#over').classList.add('on'),500);
 }
-function newGame(){
-  level=1;lives=3;score=0;streak=0;shield=false;capN=0;runRight=0;runTotal=0;runWrong=[];pendingSlow=false;
+function newGame(q){
+  if(typeof q==='boolean'){quizOn=q;S.set('quiz',q)}
+  level=1;lives=3;score=0;streak=0;shield=false;capN=0;runRight=0;runTotal=0;runWrong=[];pendingSlow=false;runKills=0;
   layout(true);initLevel();running=true;overlay=false;
   ['#start','#over','#lvl','#card'].forEach(s=>$(s).classList.remove('on'));
   beep(523,0.1,'triangle',0.05);
 }
-$('#go').addEventListener('click',newGame);
-$('#again').addEventListener('click',newGame);
+$('#go').addEventListener('click',()=>newGame(false));
+$('#goQ').addEventListener('click',()=>newGame(true));
+$('#again').addEventListener('click',()=>newGame());
 function renderStart(){
   $('#rkS').innerHTML=rankHTML(S.get('xp',0));
   const best=S.get('best',0);
@@ -438,14 +517,27 @@ function draw(t){
       ctx.fillStyle='#1a2034';ctx.fillRect(px+cell*.4,py+cell*.4,cell*.2,cell*.2);
     }
   }
+  for(const p of picks){
+    if(p.got)continue;if(p.exp-t<3000&&Math.floor(t/150)%2)continue;
+    const cx=(p.i%COLS+.5)*cell,cy=(((p.i/COLS)|0)+.5)*cell;
+    ctx.fillStyle='rgba(255,255,255,'+(0.14+0.08*Math.sin(t/160))+')';ctx.beginPath();ctx.arc(cx,cy,cell*.78,0,Math.PI*2);ctx.fill();
+    ctx.font=Math.round(cell*1.05)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(PK[p.k],cx,cy+1);
+  }
   for(const e of E){
     const ex=e.x*cell,ey=e.y*cell,r=cell*.42;
-    ctx.fillStyle=slow?'#60a5fa':'#f43f5e';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=14;
-    ctx.beginPath();ctx.arc(ex,ey,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex-r*.25,ey-r*.25,r*.28,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=slow?'#60a5fa':(e.k==='h'?'#c084fc':e.k==='p'?'#fb923c':'#f43f5e');ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=14;
+    ctx.beginPath();
+    if(e.k==='p'){ctx.moveTo(ex,ey-r*1.15);ctx.lineTo(ex+r*1.15,ey);ctx.lineTo(ex,ey+r*1.15);ctx.lineTo(ex-r*1.15,ey);ctx.closePath()}
+    else ctx.arc(ex,ey,e.k==='h'?r*1.1:r,0,Math.PI*2);
+    ctx.fill();ctx.shadowBlur=0;
+    let ox=-r*.25,oy=-r*.25;
+    if(e.k==='h'){const dx=P.x+.5-e.x,dy=P.y+.5-e.y,d=Math.hypot(dx,dy)||1;ox=dx/d*r*.4;oy=dy/d*r*.4}
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex+ox,ey+oy,r*.28,0,Math.PI*2);ctx.fill();
+    if(e.k==='h'){ctx.fillStyle='#1e0b2e';ctx.beginPath();ctx.arc(ex+ox*1.2,ey+oy*1.2,r*.13,0,Math.PI*2);ctx.fill()}
   }
   const px=P.x*cell,py=P.y*cell;
-  ctx.shadowColor='#5eead4';ctx.shadowBlur=16;ctx.fillStyle='#ffffff';
+  if(t<invUntil&&Math.floor(t/110)%2)ctx.globalAlpha=.3;
+  ctx.shadowColor=t<fastUntil?'#fbbf24':'#5eead4';ctx.shadowBlur=16;ctx.fillStyle='#ffffff';
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(px+1.5,py+1.5,cell-3,cell-3,cell*.25);else ctx.rect(px+1.5,py+1.5,cell-3,cell-3);ctx.fill();ctx.shadowBlur=0;
   if(shield){ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px+cell/2,py+cell/2,cell*.85,0,Math.PI*2);ctx.stroke()}
   for(const p of parts){ctx.globalAlpha=Math.max(0,Math.min(1,p.l));ctx.fillStyle=p.c;ctx.fillRect(p.x-2,p.y-2,4,4)}
@@ -458,12 +550,25 @@ function loop(t){
   const dt=Math.min(0.05,Math.max(0,(t-last)/1000));last=t;
   if(running&&!overlay&&G){
     acc+=dt*1000;
-    while(acc>=stepMs){acc-=stepMs;step();if(!running||overlay)break}
+    const sm=t<fastUntil?stepMs*0.62:stepMs;
+    while(acc>=sm){acc-=sm;step();if(!running||overlay)break}
     if(running&&!overlay){
-      const sp=(5.2+level*0.55)*(t<slowUntil?0.4:1);
-      outer:for(let s=0;s<3;s++){for(const e of E){moveEnemy(e,dt/3,sp);if(trail.length&&hitsTrail(e)){die();break outer}}}
+      const sp=(5.2+level*0.55)*(t<slowUntil?slowF:1);
+      outer:for(let s=0;s<3;s++){for(const e of E){
+        moveEnemy(e,dt/3,sp*(e.k==='h'?0.72:e.k==='p'?0.55:1));
+        if(e.k==='p'){if(t>=invUntil&&Math.hypot(P.x+.5-e.x,P.y+.5-e.y)<0.8){die();break outer}}
+        else if(trail.length&&hitsTrail(e)){die();break outer}
+      }}
+    }
+    if(running&&!overlay){
+      cash-=dt*(1.9+level*0.35);
+      if(cash<=0){cash=60;combo=0;vib(200);beep(110,0.4,'sawtooth',0.08);flashUntil=t+300;loseLife('💸 נגמר המזומן. סוגרים מעגלים מהר יותר.')}
+      if(cash<25&&t>nextBeat){nextBeat=t+700;beep(90,0.12,'sine',0.09)}
+      if(t>nextPick){nextPick=t+6000+Math.random()*3500;if(picks.filter(p=>!p.got).length<2)spawnPick(t)}
+      picks=picks.filter(p=>!p.got&&t<p.exp);
     }
   }
+  if(G&&Math.abs(cash-cashShown)>0.4){cashShown=cash;$('#cash').style.width=Math.max(0,cash)+'%';$('#cashw').classList.toggle('low',cash<25)}
   for(const p of parts){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=260*dt;p.l-=dt*1.2}
   if(parts.length)parts=parts.filter(p=>p.l>0);
   draw(t);
