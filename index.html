@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="כיבוש שוק">
+<style>body{padding-top:calc(env(safe-area-inset-top,0px) + 6px)!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)!important}</style>
+<title>כיבוש שוק</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0b0e18">
+<style>
+/* Layout: one-screen phone game. HUD on top, board fills the rest, decision cards as overlays. */
+:root{--bg:#0b0e18;--panel:#141a2a;--deep:#0f1424;--line:#232b42;--ink:#f2f4fa;--mut:#8f98b3;--soft:#cfd5e6;--own:#14b8a6;--trail:#fbbf24;--enemy:#f43f5e;--good:#34d399;--bad:#fb7185;--acc:#a78bfa;--opt:#1b2236;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+body{display:flex;flex-direction:column;align-items:center;padding-block:6px;padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+#hud{width:100%;max-width:560px;display:flex;align-items:center;gap:6px;justify-content:space-between;font-weight:700}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 9px;font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip small{color:var(--mut);font-weight:600;margin-inline-start:4px;font-size:12px}
+#pct{font-size:19px;color:#2dd4bf}
+#bar{width:100%;max-width:560px;height:8px;background:var(--panel);border-radius:99px;margin:6px 0;overflow:hidden}
+#fill{height:100%;width:0;background:linear-gradient(90deg,#14b8a6,#a78bfa);border-radius:99px;transition:width .4s}
+#wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0}
+canvas{display:block;border-radius:10px;box-shadow:0 0 0 1px var(--line),0 10px 40px #0008}
+.pop{position:absolute;pointer-events:none;font-weight:900;font-size:22px;color:#fff;text-shadow:0 2px 12px #14b8a6;animation:up .9s ease-out forwards;direction:ltr;white-space:nowrap}
+@keyframes up{from{transform:translate(-50%,0) scale(.7);opacity:0}20%{opacity:1;transform:translate(-50%,-10px) scale(1.2)}to{transform:translate(-50%,-64px) scale(1);opacity:0}}
+#toast{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:max-content;max-width:92%;background:#000d;border:1px solid var(--line);padding:8px 14px;border-radius:12px;font-size:14px;font-weight:700;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;line-height:1.4}
+#toast.on{opacity:1}
+.ov{position:fixed;inset:0;background:#05070dd9;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px;z-index:10;touch-action:manipulation;overflow:auto}
+.ov.on{display:flex}
+.box{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;text-align:center;animation:pin .22s ease-out;margin:auto}
+@keyframes pin{from{transform:scale(.92);opacity:0}to{transform:none;opacity:1}}
+h1{margin:2px 0 4px;font-size:34px;font-weight:900;background:linear-gradient(90deg,#2dd4bf,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{margin:0 0 8px;font-size:23px;font-weight:900}
+p{margin:8px 0;color:var(--soft);line-height:1.5;font-size:15px}
+.how{text-align:right;color:var(--soft);font-size:14px;line-height:1.55;margin:10px 0;padding:0 18px 0 0}
+.how li{margin:4px 0}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:18px;font-weight:900;color:#06221f;background:linear-gradient(90deg,#2dd4bf,#a78bfa);margin-top:14px;font-family:inherit;cursor:pointer}
+.btn:active,.opt:active{transform:scale(.98)}
+.btn:focus-visible,.opt:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.opt{display:block;width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;font-size:16px;font-weight:700;color:var(--ink);background:var(--opt);margin-top:10px;font-family:inherit;line-height:1.35;cursor:pointer}
+#tbar{height:6px;background:var(--opt);border-radius:99px;overflow:hidden;margin:4px 0 12px}
+#tfill{height:100%;width:100%;background:var(--trail)}
+.tag{display:inline-block;font-size:12px;font-weight:800;color:var(--acc);letter-spacing:.5px;margin-bottom:6px}
+#cq{font-size:19px;font-weight:800;line-height:1.4;margin:4px 0 6px}
+.res{font-size:25px;font-weight:900;margin:2px 0 6px}
+.why{background:var(--deep);border-radius:12px;padding:12px;margin-top:8px;text-align:right;color:var(--soft);line-height:1.5;font-size:15px}
+.rw{color:var(--good);font-weight:800;margin-top:10px}
+.stk{color:var(--trail);font-weight:800;margin-top:4px}
+.stat{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+.stat div{background:var(--deep);border-radius:12px;padding:8px 12px;font-size:12px;color:var(--mut);min-width:84px}
+.stat b{display:block;font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+.rank{margin:10px 0 2px;font-weight:900;color:var(--acc);font-size:17px}
+.rbar{height:6px;background:var(--deep);border-radius:99px;overflow:hidden;margin:4px 0 4px}
+.rbar i{display:block;height:100%;background:var(--acc)}
+.rk small{color:var(--mut);font-size:12px}
+.lessons{text-align:right;font-size:14px;color:var(--soft);margin:8px 0 0;padding:0 18px 0 0;line-height:1.5}
+.lessons li{margin:6px 0}
+.ltitle{font-weight:800;margin-top:12px;color:var(--ink);text-align:right}
+#mute{cursor:pointer}
+@media (prefers-reduced-motion:reduce){.box,.pop{animation:none}}
+</style>
+
+<div id="hud">
+  <div class="chip">שלב <b id="lv">1</b></div>
+  <div class="chip"><span id="pct">0%</span><small id="tg">יעד 65%</small></div>
+  <div class="chip" id="sc">0</div>
+  <div class="chip" id="lf">❤️3</div>
+  <div class="chip" id="mute" role="button" aria-label="צליל">🔊</div>
+</div>
+<div id="bar"><div id="fill"></div></div>
+<div id="wrap"><canvas id="cv"></canvas><div id="toast"></div></div>
+
+<div class="ov on" id="start"><div class="box">
+  <h1>כיבוש שוק</h1>
+  <p>כובשים נתח שוק, ובדרך מאמנים אינסטינקטים של יזם.</p>
+  <ul class="how">
+    <li>מחליקים עם האצבע כדי לזוז.</li>
+    <li>יוצאים מהשטח שלך, מציירים קו וחוזרים. כל מה שסגרת הופך לשלך.</li>
+    <li>המתחרים (העיגולים האדומים) שורפים את הקו שלך כשאתה בחוץ. מעגל גדול = רווח גדול וסיכון גדול.</li>
+    <li>כל שני כיבושים: החלטת יזם ב־7 שניות. תשובה נכונה נותנת כוח מיוחד.</li>
+  </ul>
+  <div class="rk" id="rkS"></div>
+  <p id="learned"></p>
+  <button class="btn" id="go">יאללה, לכבוש</button>
+</div></div>
+
+<div class="ov" id="card"><div class="box">
+  <div id="cAsk">
+    <span class="tag">החלטת יזם · 7 שניות</span>
+    <div id="tbar"><div id="tfill"></div></div>
+    <div id="cq"></div>
+    <button class="opt" id="o1"></button>
+    <button class="opt" id="o2"></button>
+  </div>
+  <div id="cRes" hidden>
+    <div class="res" id="rT"></div>
+    <div class="why" id="rW"></div>
+    <div class="rw" id="rR"></div>
+    <div class="stk" id="rS"></div>
+    <button class="btn" id="cGo">ממשיכים ▸</button>
+  </div>
+</div></div>
+
+<div class="ov" id="lvl"><div class="box">
+  <h2 id="lvT"></h2>
+  <div class="stat" id="lvS"></div>
+  <p id="lvP"></p>
+  <button class="btn" id="lvB">לשוק הבא ▸</button>
+</div></div>
+
+<div class="ov" id="over"><div class="box">
+  <h2>נגמר הראנוויי</h2>
+  <div class="stat" id="ovS"></div>
+  <div class="rk" id="rkO"></div>
+  <div id="ovL"></div>
+  <button class="btn" id="again">עוד סיבוב</button>
+</div></div>
+
+<script>
+const Q=[
+["יש לך רעיון חדש. מה עושים קודם?","מדברים עם 10 אנשים שיש להם את הבעיה","בונים את המוצר המלא","קודם מוודאים שהבעיה אמיתית וכואבת. לבנות לפני שמדברים זה הימור."],
+["לקוח אומר: ״רעיון מגניב, הייתי משתמש״. זה…","כמעט לא אומר כלום","אימות חזק לרעיון","מחמאות זולות. אות אמיתי הוא התחייבות: כסף, זמן, מקדמה."],
+["שני לקוחות ראשונים מבקשים פיצ׳רים שונים. מה עושים?","מחפשים את הכאב המשותף מאחורי הבקשות","בונים את שניהם","לקוחות יודעים מה כואב להם, לא תמיד איך לפתור. אתה פותר את הכאב."],
+["מתי כנראה הגיע הזמן להעלות מחיר?","כשכולם אומרים כן בלי לחשוב פעמיים","רק אחרי אלף לקוחות","אם אף אחד לא מתלונן על המחיר, הוא כנראה נמוך מדי."],
+["עולה לך 300₪ להביא לקוח שמשלם 50₪ לחודש ונשאר חודשיים. זה…","הפסד: 100₪ הכנסה מול 300₪ עלות","בסדר, העיקר לצמוח","מה שלקוח מכניס לאורך זמן (LTV) חייב להיות גבוה ממה שעולה להביא אותו (CAC)."],
+["הכסף ייגמר בעוד 4 חודשים. מה הכי דחוף?","הכנסה או גיוס, מהיום","עוד פיצ׳ר שישכנע משקיעים","גיוס כסף לוקח חודשים. ראנוויי קצר אומר לפעול עכשיו, לא בחודש השלישי."],
+["מוצר חדש, אפס משתמשים. איך מביאים את הראשונים?","ביד: הודעות אישיות, שיחות, קבוצות","קמפיין ממומן גדול","בהתחלה עושים דברים שלא מתרחבים. גיוס ידני מלמד הכי מהר מה עובד."],
+["השקעת חצי שנה בכיוון שלא עובד. ממשיכים כי כבר השקעת?","לא. מחליטים לפי מה שיקרה מכאן","כן, חבל לזרוק","זו עלות שקועה. השאלה היחידה היא מה הצעד הכי טוב מעכשיו."],
+["גרסה ראשונה. מה עדיף?","דבר קטן שפותר בעיה אחת טוב","פלטפורמה שעושה הכל","גרסה ראשונה נועדה ללמוד. פוקוס מנצח רוחב."],
+["לקוח עוזב. מה הכי שווה לעשות?","לשאול אותו למה, בשיחה קצרה","לשלוח קופון הנחה אוטומטי","עזיבה היא מידע. סיבה אחת אמיתית שווה יותר מעשרה גרפים."],
+["מה מנבא הצלחה טוב יותר בהתחלה?","לקוחות שחוזרים להשתמש","כמות הרשמות","חזרה מראה שיש ערך. הרשמה מראה רק סקרנות."],
+["מתחרה גדול נכנס לשוק שלך. מה האינסטינקט הנכון?","להתמקד בנישה שהגדול לא ישרת טוב","להוריד מחיר לאפס","הקטן מנצח בפוקוס ובמהירות, לא במלחמת מחירים."],
+["לקוח מבקש 40% הנחה. מה הצעד הראשון?","לשאול מה חשוב לו ולהציע ערך במקום הנחה","להסכים מיד כדי לא לאבד אותו","הנחה מיידית מלמדת שהמחיר גמיש. קודם מבינים את ההתנגדות."],
+["יש 3 רעיונות טובים לשבוע הבא. כמה עושים?","אחד, עד הסוף","את שלושתם במקביל","חצי משלושה דברים זה אפס דברים גמורים."],
+["מתי משחררים את המוצר?","כשהוא עוד קצת מביך אותך","כשהוא מושלם","רייד הופמן: אם הגרסה הראשונה לא מביכה אותך, שחררת מאוחר מדי."],
+["מגייסים עובד ראשון. מה הכי חשוב?","שהוא עושה בלי שמבקשים ממנו","קורות חיים מרשימים","בשלב מוקדם יוזמה ובעלות שוות יותר מתארים."],
+["רווח של 20% על הנייר, אבל הלקוחות משלמים אחרי 90 יום. הסכנה?","תזרים: אפשר להרוויח ועדיין להיגמר מכסף","אין סכנה, יש רווח","עסקים נסגרים כי נגמר המזומן, גם כשיש רווח על הנייר."],
+["איך בודקים אם אנשים באמת ישלמו?","מבקשים תשלום או מקדמה","שואלים ״היית משלם?״","מה שאנשים עושים חשוב יותר ממה שהם אומרים."],
+["מודעה א׳ מביאה פחות הקלקות אבל קונים. מודעה ב׳ מביאה הרבה הקלקות ואף קונה. מה עדיף?","א׳, כי היא מביאה כסף","ב׳, כי יש יותר הקלקות","מודדים את מה שמכניס כסף, לא את מה שנראה טוב בגרף."],
+["יש לך 10 דקות עם לקוח פוטנציאלי. מה עושים?","שואלים על הפעם האחרונה שהבעיה קרתה לו","מציגים לו את המוצר","שואלים על העבר, לא על העתיד. עובדות מנצחות דעות (מתוך The Mom Test)."],
+["יש פיצ׳ר שאף אחד לא משתמש בו. מה עושים?","מורידים אותו","משאירים, אולי יום אחד","כל פיצ׳ר עולה בתחזוקה ומבלבל. פחות זה ברור יותר."],
+["״המוצר שלי מתאים לכולם״. זה סימן ש…","עוד לא בחרת לקוח","יש לך שוק ענק","״כולם״ זה אף אחד. מתחילים מקבוצה צרה שכואב לה הכי חזק."],
+["קיבלת משוב קשה מלקוח. מה התגובה הנכונה?","תודה, ושאלת המשך","להסביר לו למה הוא טועה","משוב קשה הוא מתנה. מי שמתווכח מפסיק לקבל אותו."],
+["מה מלמד מהר יותר?","10 ניסויים קטנים","ניסוי ענק אחד","קצב הלמידה הוא מספר הניסויים. קטן, מהיר, מדיד."],
+["שותף מציע: ״נבנה עכשיו, על כסף נחשוב אחר כך״.","מגדירים מההתחלה מי ישלם ועל מה","מסכימים, קודם משתמשים","גם אם לא גובים מהיום הראשון, צריך לדעת מאיפה יבוא הכסף."],
+["יום עמוס. מה עושים קודם?","את המשימה שמקרבת לקוח משלם","לסדר את הלוגו","שאלה לכל בוקר: מה מקרב הכנסה? זה קודם."],
+["מה מגן על עסק קטן לאורך זמן?","קשר אישי ושירות שקשה להעתיק","פיצ׳ר שאף אחד עוד לא בנה","פיצ׳ר אפשר להעתיק בשבוע. אמון ומוניטין לוקחים שנים."],
+["בדקת דף נחיתה על 20 מבקרים. אפשר להסיק?","עוד לא, זה עדיין רעש","כן, יש תוצאה","מדגם קטן מטעה. מחכים להבדל שלא יכול להיות מקרי."],
+["הלקוח הכי גדול שלך מביא 70% מההכנסה. זה…","סיכון. צריך לגוון","מצוין, לקוח נאמן","כשלקוח אחד מביא את רוב הכסף, הוא מחליט אם העסק ממשיך."],
+["משקיע אמר לא. מה עושים?","שואלים מה היה משנה את התשובה","מוותרים על גיוס","כל ״לא״ הוא מידע. רוב היזמים שומעים הרבה ״לא״ לפני ״כן״."],
+["מה בדרך כלל מעלה את מספר מי שמסיים הרשמה?","פחות שדות ופחות צעדים","עוד הסבר על המוצר","כל צעד נוסף מאבד אנשים. קצר יותר, יותר מגיעים לסוף."],
+["לקוח מאוד מרוצה. מה עושים עכשיו?","מבקשים המלצה או הפניה","לא מפריעים לו","הרגע הכי טוב לבקש הפניה הוא כשהוא הכי מרוצה."],
+["המטרה לרבעון: ״לגדול״. מה חסר?","מספר ותאריך","כלום, זה ברור","מטרה בלי מספר היא משאלה. למשל: מ־10 ל־30 לקוחות משלמים עד מרץ."],
+["אתה עושה הכל לבד ונשחק. מה הצעד הראשון?","לכתוב מה חוזר על עצמו ולהעביר או לאטמט דבר אחד","לעבוד יותר שעות","מה שחוזר על עצמו מתעדים, מאטמטים או מעבירים."],
+["מוצר טוב, אבל אף אחד לא יודע עליו. מה הבעיה?","הפצה","המוצר","מוצר טוב בלי הפצה מת בשקט. מתכננים איך מגיעים ללקוח כמו שמתכננים מוצר."],
+["מציעים לך שותפות נוצצת שלא קשורה ללקוח שלך.","אומרים לא, זה מסיח","אומרים כן, הזדמנות","כל ״כן״ לדבר צדדי הוא ״לא״ ללקוח שלך."]
+];
+const RISK=["יצאת רחוק מדי. מעגל גדול = רווח גדול, אבל גם חשיפה גדולה.","כמו מזומן: כל רגע מחוץ לבסיס שורף ראנוויי.","קודם ניצחון קטן ובטוח, אחר כך מהלך גדול.","סיכון מחושב הוא קצר וברור. סיכון ארוך הוא הימור.","תסגור מעגלים מהר. מה שלא נסגר לא שלך."];
+const LVL=["השוק הבא קשה יותר: יותר מתחרים, יותר מהירות. כמו בחיים אחרי הצלחה ראשונה.","כל שלב = שוק חדש. מה שעבד קודם לא תמיד עובד עכשיו.","יותר מתחרים אומר מעגלים קטנים ומהירים יותר. ככה גדלים בשוק צפוף.","שימו לב: הניקוד מוכפל ברצף התשובות הנכונות. אינסטינקט טוב מצטבר."];
+const RANKS=[[0,"💡 רעיון על מפית"],[2000,"🛠️ MVP"],[6000,"🎯 Product-Market Fit"],[15000,"🌱 Seed"],[35000,"🚀 Series A"],[80000,"📈 סקייל־אפ"],[200000,"🦄 יוניקורן"]];
+
+const $=s=>document.querySelector(s);
+const S={get(k,d){try{const v=localStorage.getItem('ks_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('ks_'+k,JSON.stringify(v))}catch(e){}}};
+const cv=$('#cv'),ctx=cv.getContext('2d');
+const COLS=22;
+let ROWS=34,N=0,cell=16,G=null,born=null,trail=[],E=[],parts=[];
+const P={x:0,y:0,dx:0,dy:0,sx:0,sy:0};
+let level=1,lives=3,score=0,streak=0,shield=false,slowUntil=0,pendingSlow=false,capN=0,running=false,overlay=true;
+let interior=1,baseOwned=0,owned=0,target=65,stepMs=90,acc=0,last=0,shakeUntil=0,flashUntil=0;
+let runRight=0,runTotal=0,runWrong=[],recent=[];
+let muted=S.get('mute',false);
+
+/* ---------- sound & haptics ---------- */
+let AC=null;
+function beep(f,d,type,v){if(muted)return;try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;const t=AC.currentTime;g.gain.setValueAtTime(v||0.06,t);g.gain.exponentialRampToValueAtTime(0.0001,t+(d||0.1));o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+(d||0.1)+0.02)}catch(e){}}
+function arp(fs,gap){fs.forEach((f,i)=>setTimeout(()=>beep(f,0.14,'triangle',0.07),i*(gap||60)))}
+function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+$('#mute').textContent=muted?'🔇':'🔊';
+$('#mute').addEventListener('click',()=>{muted=!muted;S.set('mute',muted);$('#mute').textContent=muted?'🔇':'🔊'});
+
+/* ---------- layout ---------- */
+function layout(first){
+  const wr=$('#wrap'),hud=$('#hud').offsetHeight+$('#bar').offsetHeight+20;
+  const W=Math.min(wr.clientWidth||window.innerWidth-16,560),H=(wr.clientHeight>100?wr.clientHeight-6:window.innerHeight-hud-12);
+  if(first){ROWS=Math.max(24,Math.min(44,Math.floor(H/(W/COLS))))}
+  cell=Math.max(8,Math.floor(Math.min(W/COLS,H/ROWS)));
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=COLS*cell*dpr;cv.height=ROWS*cell*dpr;
+  cv.style.width=COLS*cell+'px';cv.style.height=ROWS*cell+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize',()=>layout(false));
+
+/* ---------- level ---------- */
+function isBase(x,y){return x<2||y<2||x>=COLS-2||y>=ROWS-2}
+function initLevel(){
+  N=COLS*ROWS;G=new Uint8Array(N);born=new Float32Array(N).fill(-1e9);trail=[];parts=[];
+  baseOwned=0;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(isBase(x,y)){G[y*COLS+x]=1;baseOwned++}
+  owned=baseOwned;interior=N-baseOwned;
+  P.x=COLS>>1;P.y=ROWS-1;P.dx=P.dy=0;P.sx=P.x;P.sy=P.y;
+  E=[];const n=Math.min(7,1+level);
+  for(let i=0;i<n;i++)E.push({x:3+Math.random()*(COLS-6),y:3+Math.random()*(ROWS-9),vx:Math.random()<.5?-1:1,vy:Math.random()<.5?-1:1});
+  stepMs=Math.max(60,90-level*3);target=Math.min(80,63+level*2);acc=0;slowUntil=0;
+  updHud();
+}
+function ownPct(){return(owned-baseOwned)/interior*100}
+function updHud(){
+  const p=ownPct();
+  $('#lv').textContent=level;
+  $('#pct').textContent=Math.floor(p)+'%';
+  $('#tg').textContent='יעד '+target+'%';
+  $('#sc').textContent=score.toLocaleString('en-US');
+  $('#lf').textContent='❤️'+lives+(shield?' 🛡️':'')+(streak>1?' 🔥'+streak:'');
+  $('#fill').style.width=Math.min(100,p/target*100)+'%';
+}
+
+/* ---------- input ---------- */
+function setDir(dx,dy){
+  if(!running||overlay)return;
+  if(trail.length&&dx===-P.dx&&dy===-P.dy&&(P.dx||P.dy))return;
+  P.dx=dx;P.dy=dy;
+}
+let tx=0,ty=0;
+window.addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(overlay)return;
+  e.preventDefault();
+  const t=e.touches[0],dx=t.clientX-tx,dy=t.clientY-ty;
+  if(Math.abs(dx)+Math.abs(dy)<16)return;
+  if(Math.abs(dx)>Math.abs(dy))setDir(Math.sign(dx),0);else setDir(0,Math.sign(dy));
+  tx=t.clientX;ty=t.clientY;
+},{passive:false});
+window.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(k==='ArrowLeft'||k==='a')setDir(-1,0);else if(k==='ArrowRight'||k==='d')setDir(1,0);
+  else if(k==='ArrowUp'||k==='w')setDir(0,-1);else if(k==='ArrowDown'||k==='s')setDir(0,1);else return;
+  e.preventDefault();
+});
+
+/* ---------- game logic ---------- */
+function step(){
+  if(!P.dx&&!P.dy)return;
+  const nx=P.x+P.dx,ny=P.y+P.dy;
+  if(nx<0||ny<0||nx>=COLS||ny>=ROWS){P.dx=P.dy=0;return}
+  const j=ny*COLS+nx,c=G[j],cur=G[P.y*COLS+P.x];
+  if(c===2){die();return}
+  if(c===0){
+    if(cur===1){P.sx=P.x;P.sy=P.y}
+    G[j]=2;trail.push(j);P.x=nx;P.y=ny;return;
+  }
+  P.x=nx;P.y=ny;
+  if(trail.length){P.dx=P.dy=0;capture()}
+}
+function solid(x,y){const cx=Math.floor(x),cy=Math.floor(y);if(cx<0||cy<0||cx>=COLS||cy>=ROWS)return true;return G[cy*COLS+cx]===1}
+function moveEnemy(e,dt,sp){
+  const r=0.4;let nx=e.x+e.vx*sp*dt,ny=e.y+e.vy*sp*dt;
+  if(solid(nx+e.vx*r,e.y)){e.vx*=-1;nx=e.x}
+  if(solid(e.x,ny+e.vy*r)){e.vy*=-1;ny=e.y}
+  if(solid(nx+e.vx*r,ny+e.vy*r)){e.vx*=-1;e.vy*=-1;nx=e.x;ny=e.y}
+  e.x=nx;e.y=ny;
+}
+function hitsTrail(e){
+  const pts=[[0,0],[.32,0],[-.32,0],[0,.32],[0,-.32]];
+  for(const p of pts){const cx=Math.floor(e.x+p[0]),cy=Math.floor(e.y+p[1]);if(cx>=0&&cy>=0&&cx<COLS&&cy<ROWS&&G[cy*COLS+cx]===2)return true}
+  return false;
+}
+function capture(){
+  const now=performance.now();
+  let gained=trail.length;
+  for(const i of trail){G[i]=1;born[i]=now}
+  trail=[];
+  const seen=new Uint8Array(N),st=[];
+  const seed=i=>{if(i>=0&&i<N&&G[i]===0&&!seen[i]){seen[i]=1;st.push(i)}};
+  for(const e of E){
+    const i=Math.floor(e.y)*COLS+Math.floor(e.x);
+    seed(i);if(G[i]!==0){seed(i+1);seed(i-1);seed(i+COLS);seed(i-COLS)}
+  }
+  while(st.length){const i=st.pop(),x=i%COLS;if(x>0)seed(i-1);if(x<COLS-1)seed(i+1);seed(i-COLS);seed(i+COLS)}
+  const filled=[];
+  for(let i=0;i<N;i++)if(G[i]===0&&!seen[i]){
+    G[i]=1;const x=i%COLS,y=(i/COLS)|0;born[i]=now+(Math.abs(x-P.x)+Math.abs(y-P.y))*14;gained++;filled.push(i);
+  }
+  owned+=gained;
+  const pct=gained/interior*100;
+  const mult=1+streak*0.2;
+  const pts=Math.round(gained*10*level*mult);
+  score+=pts;
+  popup('+'+pct.toFixed(1)+'%',P.x,P.y);
+  const pool=filled.length?filled:[P.y*COLS+P.x];
+  for(let k=0;k<Math.min(46,4+filled.length);k++){const i=pool[(Math.random()*pool.length)|0];spark((i%COLS+.5)*cell,(((i/COLS)|0)+.5)*cell)}
+  if(pct>=8){arp([523,659,784,1046],55);toast('🚀 מהלך גדול! +'+pts.toLocaleString('en-US'));shakeUntil=now+260;vib([30,40,30])}
+  else{arp(pct>=3?[587,740,880]:[659,880],50);vib(20)}
+  updHud();
+  if(ownPct()>=target){overlay=true;setTimeout(levelDone,650);return}
+  if(pct>=1){capN++;if(capN%2===0){overlay=true;setTimeout(showCard,480)}}
+}
+function die(){
+  for(const i of trail)G[i]=0;
+  trail=[];P.x=P.sx;P.y=P.sy;P.dx=P.dy=0;
+  const now=performance.now();shakeUntil=now+380;flashUntil=now+300;
+  vib(160);beep(130,0.35,'sawtooth',0.08);
+  if(shield){shield=false;toast('🛡️ המגן ספג את המכה');updHud();return}
+  lives--;updHud();
+  if(lives<=0){gameOver();return}
+  toast(RISK[(Math.random()*RISK.length)|0]);
+}
+
+/* ---------- effects ---------- */
+function popup(text,x,y){
+  const d=document.createElement('div');d.className='pop';d.textContent=text;
+  d.style.left=(cv.offsetLeft+(x+.5)*cell)+'px';d.style.top=(cv.offsetTop+y*cell-10)+'px';
+  $('#wrap').appendChild(d);setTimeout(()=>d.remove(),950);
+}
+let toastT=null;
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),2600)}
+function spark(x,y){const a=Math.random()*Math.PI*2,s=40+Math.random()*120;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-80,l:0.7+Math.random()*0.5,c:Math.random()<.5?'#ffffff':'#5eead4'})}
+
+/* ---------- decision cards ---------- */
+let cur=null,cardTimer=null,answered=false;
+function pickQ(){
+  const st=S.get('st',{});
+  let pool=Q.map((q,i)=>{const s=st[i]||{c:0,w:0};return{i,s:s.c*2-s.w*3+Math.random()*2.5}}).filter(p=>!recent.includes(p.i));
+  pool.sort((a,b)=>a.s-b.s);
+  const i=pool[0].i;recent.push(i);if(recent.length>8)recent.shift();return i;
+}
+function showCard(){
+  if(!running)return;
+  const i=pickQ(),q=Q[i];cur={i,q,flip:Math.random()<.5};answered=false;
+  $('#cq').textContent=q[0];
+  $('#o1').textContent=cur.flip?q[2]:q[1];
+  $('#o2').textContent=cur.flip?q[1]:q[2];
+  $('#cAsk').hidden=false;$('#cRes').hidden=true;
+  const f=$('#tfill');f.style.transition='none';f.style.width='100%';void f.offsetWidth;f.style.transition='width 7s linear';f.style.width='0%';
+  $('#card').classList.add('on');beep(880,0.08,'sine',0.05);
+  clearTimeout(cardTimer);cardTimer=setTimeout(()=>answer(-1),7000);
+}
+function answer(pick){
+  if(answered)return;answered=true;clearTimeout(cardTimer);
+  const correctBtn=cur.flip?2:1,ok=pick===correctBtn,q=cur.q;
+  const st=S.get('st',{});const s=st[cur.i]||{c:0,w:0};
+  if(ok)s.c++;else s.w++;st[cur.i]=s;S.set('st',st);
+  runTotal++;
+  let rw='';
+  if(ok){streak++;runRight++;rw=reward();arp([659,880,1175],70);vib([20,30,20])}
+  else{streak=0;runWrong.push(q);beep(200,0.28,'square',0.045);vib(80)}
+  $('#rT').textContent=ok?'✅ נכון!':(pick===-1?'⏱️ לא החלטת':'❌ לא בדיוק');
+  $('#rT').style.color=ok?'var(--good)':'var(--bad)';
+  $('#rW').textContent=(ok?'':(pick===-1?'גם לא להחליט זו החלטה. ':'התשובה: '+q[1]+'. '))+q[3];
+  $('#rR').textContent=rw;
+  $('#rS').textContent=streak>1?'🔥 רצף '+streak+' · ניקוד ×'+(1+streak*0.2).toFixed(1):'';
+  $('#cAsk').hidden=true;$('#cRes').hidden=false;
+  updHud();
+}
+function reward(){
+  const o=['shield','slow','bonus'];if(lives<5)o.push('life');
+  const r=o[(Math.random()*o.length)|0];
+  if(r==='shield'){shield=true;return'🛡️ מגן: הפגיעה הבאה לא תעלה לך'}
+  if(r==='slow'){pendingSlow=true;return'🧊 המתחרים מואטים ל־9 שניות'}
+  if(r==='life'){lives++;return'❤️ +1 חודש ראנוויי'}
+  const b=300*level;score+=b;return'💰 +'+b.toLocaleString('en-US')+' נקודות';
+}
+$('#o1').addEventListener('click',()=>answer(1));
+$('#o2').addEventListener('click',()=>answer(2));
+$('#cGo').addEventListener('click',()=>{
+  $('#card').classList.remove('on');
+  if(pendingSlow){slowUntil=performance.now()+9000;pendingSlow=false}
+  acc=0;overlay=false;
+});
+
+/* ---------- level / game over ---------- */
+function stat(label,val){return'<div><b>'+val+'</b>'+label+'</div>'}
+function levelDone(){
+  if(!running)return;
+  const bonus=lives*500*level;score+=bonus;
+  const gotLife=lives<5;if(gotLife)lives++;
+  arp([523,659,784,1046,1318],85);vib([40,50,40,50,80]);
+  $('#lvT').textContent='שלב '+level+' הושלם 🎉';
+  $('#lvS').innerHTML=stat('נתח שוק',Math.floor(ownPct())+'%')+stat('בונוס ראנוויי','+'+bonus.toLocaleString('en-US'))+stat('ניקוד',score.toLocaleString('en-US'));
+  $('#lvP').textContent=(gotLife?'❤️ קיבלת עוד חודש ראנוויי. ':'')+LVL[(level-1)%LVL.length];
+  $('#lvl').classList.add('on');updHud();
+}
+$('#lvB').addEventListener('click',()=>{$('#lvl').classList.remove('on');level++;initLevel();overlay=false});
+function rankHTML(xp){
+  let i=0;while(i+1<RANKS.length&&xp>=RANKS[i+1][0])i++;
+  const c=RANKS[i],n=RANKS[i+1],p=n?(xp-c[0])/(n[0]-c[0]):1;
+  return'<div class="rank">'+c[1]+'</div><div class="rbar"><i style="width:'+Math.round(p*100)+'%"></i></div><small>'+(n?'עוד '+(n[0]-xp).toLocaleString('en-US')+' XP לדרגת '+n[1]:'הגעת לפסגה')+'</small>';
+}
+function learnedCount(){const st=S.get('st',{});let n=0;for(const k in st)if(st[k].c>0)n++;return n}
+function gameOver(){
+  running=false;overlay=true;clearTimeout(cardTimer);$('#card').classList.remove('on');
+  const best=Math.max(S.get('best',0),score);S.set('best',best);
+  const xp=S.get('xp',0)+score;S.set('xp',xp);
+  $('#ovS').innerHTML=stat('ניקוד',score.toLocaleString('en-US'))+stat('שיא',best.toLocaleString('en-US'))+stat('שלב',level)+stat('החלטות נכונות',runRight+'/'+runTotal);
+  $('#rkO').innerHTML=rankHTML(xp);
+  const seenW=new Set(),ls=[];for(const q of runWrong){if(!seenW.has(q[0])){seenW.add(q[0]);ls.push(q)}}
+  $('#ovL').innerHTML=ls.length?'<div class="ltitle">מה לקחת מהסיבוב:</div><ul class="lessons">'+ls.slice(0,3).map(q=>'<li>'+q[3]+'</li>').join('')+'</ul>':(runTotal?'<p>כל ההחלטות נכונות. אינסטינקט חד.</p>':'');
+  setTimeout(()=>$('#over').classList.add('on'),500);
+}
+function newGame(){
+  level=1;lives=3;score=0;streak=0;shield=false;capN=0;runRight=0;runTotal=0;runWrong=[];pendingSlow=false;
+  layout(true);initLevel();running=true;overlay=false;
+  ['#start','#over','#lvl','#card'].forEach(s=>$(s).classList.remove('on'));
+  beep(523,0.1,'triangle',0.05);
+}
+$('#go').addEventListener('click',newGame);
+$('#again').addEventListener('click',newGame);
+function renderStart(){
+  $('#rkS').innerHTML=rankHTML(S.get('xp',0));
+  const best=S.get('best',0);
+  $('#learned').textContent='למדת '+learnedCount()+' מתוך '+Q.length+' עקרונות'+(best?' · שיא: '+best.toLocaleString('en-US'):'');
+}
+
+/* ---------- render loop ---------- */
+function draw(t){
+  const W=COLS*cell,H=ROWS*cell;
+  ctx.save();
+  if(t<shakeUntil)ctx.translate((Math.random()-.5)*7,(Math.random()-.5)*7);
+  ctx.fillStyle='#0e1220';ctx.fillRect(-10,-10,W+20,H+20);
+  if(!G){ctx.restore();return}
+  const slow=t<slowUntil;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const i=y*COLS+x,c=G[i],px=x*cell,py=y*cell;
+    if(c===1){
+      const a=(t-born[i])/380;
+      if(a<0){ctx.fillStyle='#1a2034';ctx.fillRect(px+cell*.4,py+cell*.4,cell*.2,cell*.2);continue}
+      if(a<1)ctx.fillStyle='hsl(172,80%,'+(94-a*48)+'%)';
+      else if(isBase(x,y))ctx.fillStyle=((x+y)&1)?'#0f766e':'#0d6b64';
+      else ctx.fillStyle=((x+y)&1)?'#14b8a6':'#11a493';
+      ctx.fillRect(px,py,cell,cell);
+    }else if(c===2){
+      ctx.fillStyle='hsl(43,96%,'+(56+Math.sin(t/90+i)*9)+'%)';ctx.fillRect(px+1,py+1,cell-2,cell-2);
+    }else{
+      ctx.fillStyle='#1a2034';ctx.fillRect(px+cell*.4,py+cell*.4,cell*.2,cell*.2);
+    }
+  }
+  for(const e of E){
+    const ex=e.x*cell,ey=e.y*cell,r=cell*.42;
+    ctx.fillStyle=slow?'#60a5fa':'#f43f5e';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=14;
+    ctx.beginPath();ctx.arc(ex,ey,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex-r*.25,ey-r*.25,r*.28,0,Math.PI*2);ctx.fill();
+  }
+  const px=P.x*cell,py=P.y*cell;
+  ctx.shadowColor='#5eead4';ctx.shadowBlur=16;ctx.fillStyle='#ffffff';
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(px+1.5,py+1.5,cell-3,cell-3,cell*.25);else ctx.rect(px+1.5,py+1.5,cell-3,cell-3);ctx.fill();ctx.shadowBlur=0;
+  if(shield){ctx.strokeStyle='#a78bfa';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px+cell/2,py+cell/2,cell*.85,0,Math.PI*2);ctx.stroke()}
+  for(const p of parts){ctx.globalAlpha=Math.max(0,Math.min(1,p.l));ctx.fillStyle=p.c;ctx.fillRect(p.x-2,p.y-2,4,4)}
+  ctx.globalAlpha=1;
+  if(t<flashUntil){ctx.fillStyle='rgba(244,63,94,'+((flashUntil-t)/300*0.35)+')';ctx.fillRect(0,0,W,H)}
+  ctx.restore();
+}
+function loop(t){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05,Math.max(0,(t-last)/1000));last=t;
+  if(running&&!overlay&&G){
+    acc+=dt*1000;
+    while(acc>=stepMs){acc-=stepMs;step();if(!running||overlay)break}
+    if(running&&!overlay){
+      const sp=(5.2+level*0.55)*(t<slowUntil?0.4:1);
+      outer:for(let s=0;s<3;s++){for(const e of E){moveEnemy(e,dt/3,sp);if(trail.length&&hitsTrail(e)){die();break outer}}}
+    }
+  }
+  for(const p of parts){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=260*dt;p.l-=dt*1.2}
+  if(parts.length)parts=parts.filter(p=>p.l>0);
+  draw(t);
+}
+layout(true);renderStart();
+requestAnimationFrame(t=>{last=t;loop(t)});
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}</script>
+</html>
