@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1f3d1c">
+<title>ראלי הטיה</title>
+<style>
+html,body{margin:0;height:100%;background:#2f5d2a;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#fff;overscroll-behavior:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#hud{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:10px;right:10px;display:flex;justify-content:space-between;gap:6px;pointer-events:none;font-weight:800}
+.c{background:#000a;border-radius:12px;padding:6px 10px;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#spd{font-size:20px;color:#fbbf24}
+#tilt{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);left:14px;width:72px;height:72px;border-radius:50%;background:#0008;border:2px solid #fff5;pointer-events:none}
+#tilt:before,#tilt:after{content:"";position:absolute;background:#fff3}
+#tilt:before{left:35px;top:6px;width:2px;height:60px}
+#tilt:after{top:35px;left:6px;height:2px;width:60px}
+#dot{position:absolute;width:18px;height:18px;border-radius:50%;background:#fbbf24;left:27px;top:27px;box-shadow:0 0 10px #fbbf24}
+#btns{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);right:14px;display:flex;gap:8px}
+#btns button{background:#000b;color:#fff;border:1px solid #fff4;border-radius:12px;padding:11px 13px;font-size:15px;font-weight:800;font-family:inherit}
+#ov{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center}
+#ov .b{max-width:380px}
+h1{font-size:38px;margin:0 0 6px;color:#fbbf24}
+p{line-height:1.55;color:#ddd;font-size:16px;margin:8px 0}
+#go{width:100%;padding:16px;border:0;border-radius:14px;font-size:21px;font-weight:900;background:#fbbf24;color:#231a00;margin-top:14px;font-family:inherit}
+#msg{position:fixed;top:36%;left:0;right:0;text-align:center;font-size:30px;font-weight:900;text-shadow:0 2px 12px #000;pointer-events:none;opacity:0;transition:opacity .3s;padding:0 16px}
+#msg.on{opacity:1}
+</style></head><body>
+<canvas id="cv"></canvas>
+<div id="hud"><div class="c" id="lap">הקפה 1</div><div class="c" id="tm">0.00</div><div class="c" id="best">שיא —</div><div class="c" id="spd">0</div></div>
+<div id="tilt"><div id="dot"></div></div>
+<div id="btns"><button id="cal">כיול</button><button id="invS" aria-label="הפוך היגוי">⇄</button><button id="invT" aria-label="הפוך גז">⇅</button></div>
+<div id="msg"></div>
+<div id="ov"><div class="b">
+  <h1>ראלי הטיה</h1>
+  <p>מחזיקים את הטלפון <b>לאורך</b>, בזווית שנוח לך.</p>
+  <p>מטים הצידה כדי לפנות.<br>מטים קדימה כדי לנסוע, אחורה לרוורס.<br>מחזיקים ישר = עומדים.</p>
+  <p style="font-size:14px;color:#aaa">כיול = המצב הנוכחי של היד הוא ״ישר״. אם הכיוון הפוך: ⇄ הופך היגוי, ⇅ הופך גז.<br>בלי הטיה: לוחצים על צד שמאל או ימין של המסך.</p>
+  <button id="go">סע</button>
+</div></div>
+<script>
+const $=s=>document.getElementById(s);
+const LS={get(k,d){try{const v=localStorage.getItem('rh_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('rh_'+k,JSON.stringify(v))}catch(e){}}};
+const cv=$('cv'),ctx=cv.getContext('2d');
+let W=0,H=0,dpr=1;
+function rs(){dpr=Math.min(2,window.devicePixelRatio||1);W=window.innerWidth;H=window.innerHeight;cv.width=W*dpr;cv.height=H*dpr}
+window.addEventListener('resize',rs);rs();
+
+/* ---------- track: closed Catmull-Rom loop ---------- */
+const CP=[[0,0],[700,-80],[1250,80],[1450,520],[1150,860],[700,700],[480,980],[20,1060],[-420,850],[-560,430],[-330,150]];
+const TW=150,T=[];
+(function(){const n=CP.length;for(let i=0;i<n;i++){const p0=CP[(i-1+n)%n],p1=CP[i],p2=CP[(i+1)%n],p3=CP[(i+2)%n];
+  for(let k=0;k<24;k++){const t=k/24,t2=t*t,t3=t2*t;const f=(a,b,c,d)=>0.5*(2*b+(-a+c)*t+(2*a-5*b+4*c-d)*t2+(-a+3*b-3*c+d)*t3);T.push([f(p0[0],p1[0],p2[0],p3[0]),f(p0[1],p1[1],p2[1],p3[1])])}}})();
+const NT=T.length;
+const path=new Path2D();T.forEach((p,i)=>i?path.lineTo(p[0],p[1]):path.moveTo(p[0],p[1]));path.closePath();
+function nearestFull(x,y){let b=1e18,bi=0;for(let i=0;i<NT;i++){const dx=T[i][0]-x,dy=T[i][1]-y,d=dx*dx+dy*dy;if(d<b){b=d;bi=i}}return[bi,b]}
+// scenery: trees and rocks off the track
+const DEC=[];(function(){let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  for(let k=0;k<420;k++){const x=-1100+r()*3200,y=-700+r()*2400;const[,d]=nearestFull(x,y);if(d>(TW*0.9)*(TW*0.9))DEC.push([x,y,10+r()*22,r()<.8?0:1])}})();
+
+/* ---------- car ---------- */
+const a0=Math.atan2(T[1][1]-T[0][1],T[1][0]-T[0][0]);
+const car={x:T[0][0]-Math.cos(a0)*60,y:T[0][1]-Math.sin(a0)*60,a:a0,vx:0,vy:0,vf:0,vl:0};
+let steer=0,thr=0,onTrack=true,idx=NT-3,half=false,lapN=1,lapStart=0,started=false,running=false,best=LS.get('best',0);
+const skids=[];
+function phys(dt){
+  const fx=Math.cos(car.a),fy=Math.sin(car.a),rx=-fy,ry=fx;
+  let vf=car.vx*fx+car.vy*fy,vl=car.vx*rx+car.vy*ry;
+  const maxF=onTrack?580:230,maxR=onTrack?190:110;
+  if(thr>0.02)vf+=thr*(vf<0?950:460)*dt;
+  else if(thr<-0.02)vf+=thr*(vf>0?950:330)*dt;
+  else{vf*=Math.exp(-2.4*dt);if(Math.abs(vf)<5)vf=0}
+  if(vf>maxF)vf+=(maxF-vf)*Math.min(1,3*dt);
+  if(vf<-maxR)vf+=(-maxR-vf)*Math.min(1,3*dt);
+  vf*=Math.exp(-(onTrack?0.2:1.2)*dt);
+  const sp=Math.abs(vf),drift=sp>330&&Math.abs(steer)>0.55;
+  vl*=Math.exp(-(drift?1.9:onTrack?9:5)*dt);
+  car.vx=fx*vf+rx*vl;car.vy=fy*vf+ry*vl;
+  car.x+=car.vx*dt;car.y+=car.vy*dt;
+  car.a+=steer*2.8*Math.min(1,sp/110)*(vf<0?-1:1)*(drift?1.2:1)*dt;
+  car.vf=vf;car.vl=vl;
+  if(Math.abs(vl)>55&&skids.length<900){const bx=car.x-fx*16,by=car.y-fy*16;skids.push([bx+rx*9,by+ry*9],[bx-rx*9,by-ry*9])}
+  else if(skids.length>=900)skids.splice(0,40);
+}
+function trackPos(now){
+  let b=1e18,bi=idx;
+  for(let k=-30;k<=30;k++){const i=(idx+k+NT)%NT,dx=T[i][0]-car.x,dy=T[i][1]-car.y,d=dx*dx+dy*dy;if(d<b){b=d;bi=i}}
+  if(b>(TW*2)*(TW*2)){const r=nearestFull(car.x,car.y);bi=r[0];b=r[1]}
+  if(bi>NT*0.4&&bi<NT*0.6)half=true;
+  if(half&&idx>NT*0.85&&bi<NT*0.15)lap(now);
+  idx=bi;onTrack=Math.sqrt(b)<TW/2+4;
+}
+function fmt(ms){return(ms/1000).toFixed(2)}
+let msgT=null;
+function msg(t){const m=$('msg');m.textContent=t;m.classList.add('on');clearTimeout(msgT);msgT=setTimeout(()=>m.classList.remove('on'),1800)}
+function lap(now){
+  const t=now-lapStart;half=false;lapN++;lapStart=now;
+  if(!best||t<best){best=t;LS.set('best',best);msg('🏁 שיא חדש! '+fmt(t))}else msg('הקפה '+(lapN-1)+' · '+fmt(t));
+}
+
+/* ---------- input ---------- */
+let beta=0,gamma=0,b0=null,g0=null,hasTilt=false,invS=LS.get('invS',1),invT=LS.get('invT',1);
+window.addEventListener('deviceorientation',e=>{if(e.beta==null||e.gamma==null)return;hasTilt=true;beta=e.beta;gamma=e.gamma;if(b0===null){b0=beta;g0=gamma}});
+function curve(v,dead,full){const a=Math.abs(v);if(a<dead)return 0;return Math.sign(v)*Math.min(1,Math.pow((a-dead)/(full-dead),1.25))}
+function calib(){b0=beta;g0=gamma;msg('כויל ✔')}
+$('cal').addEventListener('click',calib);
+$('invS').addEventListener('click',()=>{invS*=-1;LS.set('invS',invS);msg(invS>0?'היגוי רגיל':'היגוי הפוך')});
+$('invT').addEventListener('click',()=>{invT*=-1;LS.set('invT',invT);msg(invT>0?'גז רגיל':'גז הפוך')});
+const keys={};
+window.addEventListener('keydown',e=>{keys[e.key]=1});window.addEventListener('keyup',e=>{keys[e.key]=0});
+let touches=[];
+function tUpd(e){touches=[...e.touches].map(t=>[t.clientX,t.clientY])}
+cv.addEventListener('touchstart',tUpd,{passive:true});cv.addEventListener('touchmove',e=>{e.preventDefault();tUpd(e)},{passive:false});cv.addEventListener('touchend',tUpd,{passive:true});
+function readInput(){
+  let s=0,g=0;
+  if(keys.ArrowLeft||keys.a)s-=1;if(keys.ArrowRight||keys.d)s+=1;if(keys.ArrowUp||keys.w)g+=1;if(keys.ArrowDown||keys.s)g-=1;
+  if(s||g){steer=s;thr=g;return}
+  if(touches.length){let ts=0;for(const t of touches){if(t[0]<W*0.4)ts-=1;else if(t[0]>W*0.6)ts+=1}steer=Math.max(-1,Math.min(1,ts));thr=touches.some(t=>t[1]>H*0.82&&t[0]>W*0.4&&t[0]<W*0.6)?-1:1;return}
+  if(hasTilt&&b0!==null){steer=invS*curve(gamma-g0,3,20);thr=invT*curve(b0-beta,4,16);return}
+  steer=0;thr=0;
+}
+
+/* ---------- start ---------- */
+$('go').addEventListener('click',async()=>{
+  try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')await DeviceOrientationEvent.requestPermission()}catch(e){}
+  try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}
+  $('ov').style.display='none';running=true;b0=null;
+  setTimeout(()=>{if(!hasTilt)msg('אין הטיה: לחץ על צדי המסך')},1500);
+});
+
+/* ---------- draw ---------- */
+function draw(now){
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle='#2f5d2a';ctx.fillRect(0,0,W,H);
+  const sp=Math.hypot(car.vx,car.vy),z=Math.max(0.6,1-sp/1500)*Math.min(W,H)/400;
+  ctx.translate(W/2,H*0.66);ctx.scale(z,z);ctx.rotate(-car.a-Math.PI/2);ctx.translate(-car.x,-car.y);
+  // grass stripes for sense of speed
+  ctx.fillStyle='#2b5526';for(let gx=-1200;gx<2200;gx+=160)ctx.fillRect(gx,-800,80,2600);
+  ctx.lineJoin='round';ctx.lineCap='round';
+  ctx.strokeStyle='#f3f4f6';ctx.lineWidth=TW+18;ctx.stroke(path);
+  ctx.setLineDash([34,34]);ctx.strokeStyle='#dc2626';ctx.stroke(path);ctx.setLineDash([]);
+  ctx.strokeStyle='#3b3e47';ctx.lineWidth=TW;ctx.stroke(path);
+  ctx.setLineDash([28,36]);ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=4;ctx.stroke(path);ctx.setLineDash([]);
+  // start line (checkered)
+  const sa=a0+Math.PI/2;ctx.save();ctx.translate(T[0][0],T[0][1]);ctx.rotate(sa);
+  for(let i=0;i<10;i++)for(let j=0;j<2;j++){ctx.fillStyle=(i+j)%2?'#111':'#fff';ctx.fillRect(-TW/2+i*TW/10,-10+j*10,TW/10,10)}
+  ctx.restore();
+  // skids
+  ctx.fillStyle='rgba(20,20,20,.45)';for(const s of skids)ctx.fillRect(s[0]-3,s[1]-3,6,6);
+  // scenery
+  for(const d of DEC){
+    if(Math.abs(d[0]-car.x)>900||Math.abs(d[1]-car.y)>900)continue;
+    if(d[3]===0){ctx.fillStyle='#1d3f1a';ctx.beginPath();ctx.arc(d[0]+5,d[1]+5,d[2],0,7);ctx.fill();ctx.fillStyle='#3f7a35';ctx.beginPath();ctx.arc(d[0],d[1],d[2],0,7);ctx.fill();ctx.fillStyle='#5a9a4a';ctx.beginPath();ctx.arc(d[0]-d[2]*.3,d[1]-d[2]*.3,d[2]*.45,0,7);ctx.fill()}
+    else{ctx.fillStyle='#8b8f98';ctx.beginPath();ctx.arc(d[0],d[1],d[2]*.6,0,7);ctx.fill()}
+  }
+  // car
+  ctx.save();ctx.translate(car.x,car.y);ctx.rotate(car.a);
+  ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(-20,-11,46,26);
+  ctx.fillStyle='#111';ctx.fillRect(-17,-15,12,5);ctx.fillRect(-17,10,12,5);ctx.fillRect(10,-15,11,5);ctx.fillRect(10,10,11,5);
+  ctx.fillStyle='#f59e0b';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(-23,-12,46,24,7);else ctx.rect(-23,-12,46,24);ctx.fill();
+  ctx.fillStyle='#1f2937';ctx.fillRect(2,-9,10,18);ctx.fillRect(-16,-8,7,16);
+  ctx.fillStyle='#fff';ctx.fillRect(-4,-12,3,24);
+  ctx.fillStyle='#fef9c3';ctx.fillRect(20,-10,3,5);ctx.fillRect(20,5,3,5);
+  if(thr<-0.05){ctx.fillStyle='#ef4444';ctx.fillRect(-24,-10,3,5);ctx.fillRect(-24,5,3,5)}
+  ctx.restore();
+  // HUD
+  $('spd').textContent=Math.round(Math.abs(car.vf)/5)+' קמ״ש';
+  $('tm').textContent=started?fmt(now-lapStart):'0.00';
+  $('lap').textContent='הקפה '+lapN;
+  $('best').textContent='שיא '+(best?fmt(best):'—');
+  $('dot').style.transform='translate('+(steer*26)+'px,'+(-thr*26)+'px)';
+}
+let last=0;
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.033,Math.max(0,(now-last)/1000));last=now;
+  if(running){
+    readInput();
+    if(!started&&Math.abs(thr)>0.05){started=true;lapStart=now}
+    phys(dt);trackPos(now);
+  }
+  draw(now);
+}
+requestAnimationFrame(t=>{last=t;loop(t)});
+document.addEventListener('visibilitychange',()=>{last=performance.now()});
+</script>
+</body></html>
